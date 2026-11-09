@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16
+    container_name: routedesk-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: routedesk
+      POSTGRES_USER: routedesk
+      POSTGRES_PASSWORD: routedesk_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - routedesk_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U routedesk -d routedesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: routedesk-api
+    environment:
+      DATABASE_URL: postgresql+psycopg://routedesk:routedesk_dev_password@db:5432/routedesk
+      JWT_SECRET: development-only-change-me-in-production
+      JWT_EXPIRE_MINUTES: "720"
+      DEMO_PASSWORD: demo12345
+      CLASSIFIER_MODE: baseline
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  routedesk_pgdata:
